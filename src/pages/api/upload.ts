@@ -1,7 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import formidable from 'formidable';
-import { MongoClient, ServerApiVersion, GridFSBucket, Db, ObjectId } from "mongodb";
-import { Readable } from 'stream';
 import { createFile } from '@/services/fileOperations';
 
 export const config = {
@@ -10,10 +8,8 @@ export const config = {
     }
 }
 
-// Define response type
 type ResponseData = {
     message?: string;
-    filePath?: string;
     error?: string;
     fileId?: string;
 };
@@ -21,14 +17,10 @@ type ResponseData = {
 export default async function handler(req: NextApiRequest, res: NextApiResponse<ResponseData>) {
     if (req.method === 'POST') {
         try {
-            const form = formidable({
-                keepExtensions: true,
-            });
-
+            const form = formidable({ keepExtensions: true });
             const [fields, files] = await form.parse(req);
 
             const uploadedFile = files.file;
-
             if (!uploadedFile) {
                 return res.status(400).json({ error: "No file uploaded" });
             }

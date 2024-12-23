@@ -27,15 +27,8 @@ const FileUpload = () => {
                 method: "POST",
                 body: formData,
             });
-
             const result = await response.json();
-
-            if (response.ok) {
-                setMessage(`File uploaded successfully: ${result.filePath}`);
-            }
-            else {
-                setMessage(`Error: ${result.error}`);
-            }
+            setMessage((response.ok) ? `File uploaded successfully with file id: ${result.fileId}` : `Error: ${result.error}`);
         }
         catch (error) {
             setMessage(`Error while uploading file: ${error}`);
