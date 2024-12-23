@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import formidable from 'formidable';
-import { createFile } from '@/services/fileOperations';
+import { MongoClient, ServerApiVersion, GridFSBucket, Db } from "mongodb";
+import { Readable } from 'stream';
 
 export const config = {
     api: {
@@ -11,6 +12,7 @@ export const config = {
 type ResponseData = {
     message?: string;
     error?: string;
+    filePath?: string;
 };
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse<ResponseData>) {
@@ -31,9 +33,40 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
                 return res.status(400).json({ error: "File name missing" });
             }
 
-            createFile(file, originalFilename);
-                
-            res.status(200).json({ message: "File uploaded successfully to MongoDB" });
+            const uri = "mongodb+srv://angelfishmongo:jZd1LGFMAZshy14B@cluster0.hjdsx.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
+
+            // Create a MongoClient with a MongoClientOptions object to set the Stable API version
+            const client = new MongoClient(uri, {
+                serverApi: {
+                    version: ServerApiVersion.v1,
+                    strict: true,
+                    deprecationErrors: true,
+                }
+            });
+
+            const database: Db = client.db("testDB");
+            const bucket = new GridFSBucket(database, {
+                chunkSizeBytes: 1024 * 255,
+                bucketName: 'testBucket'
+            });
+
+            const fileStream = Readable.from(file.filepath);
+
+            fileStream
+                .pipe(bucket.openUploadStream(originalFilename))
+                .on('error', function (error) {
+                    console.error(`Error while uploading file to Atlas: ${error}`);
+                    res.status(500).json({ error: `Error while uploading file to Atlas: ${error}` });
+                })
+                .on('finish', function () {
+                    console.log('File successfully uploaded to Atlas');
+                    client.close();
+                });
+
+            res.status(200).json({
+                message: "File uploaded successfully",
+                filePath: `/uploads/${file.originalFilename}`,
+            })
         }
         catch (error) {
             console.error(error);
