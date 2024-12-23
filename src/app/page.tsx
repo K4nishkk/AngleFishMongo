@@ -1,6 +1,7 @@
 'use client'
 
 import FileDownload from "@/components/fileDownload";
+import FileUpdate from "@/components/fileUpdate";
 import FileUpload from "@/components/fileUpload";
 
 const Home = () => {
@@ -9,6 +10,7 @@ const Home = () => {
     <>
       <FileUpload />
       <FileDownload />
+      <FileUpdate />
     </>
   );
 };

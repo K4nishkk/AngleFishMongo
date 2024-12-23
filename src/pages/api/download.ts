@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getBucket } from '@/config/db';
+import { retrieveFile } from '@/services/fileOperations';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     if (req.method === 'GET') {
@@ -10,24 +10,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
 
         try {
-            const { client, bucket } = await getBucket();
-
-            const downloadStream = bucket.openDownloadStreamByName(fileName);
-
             // Set headers for file download
             res.setHeader('Content-Type', 'application/octet-stream');
             res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
 
-            // Pipe the file stream directly to the response
-            downloadStream
-                .pipe(res)
-                .on('error', (error) => {
-                    console.error(`Error downloading file: ${error}`);
-                    res.status(404).json({ error: 'File not found or download error' });
-                })
-                .on('close', () => {
-                    client.close();
-                });
+            // Retrieve the file stream
+            const downloadStream = await retrieveFile(fileName);
+            if (!downloadStream) {
+                return res.status(404).json({ error: 'File not found' });
+            }
+
+            // Pipe the download stream to the response
+            downloadStream.pipe(res);
+
+            // Handle stream events
+            downloadStream.on('end', () => {
+                console.log(`Download of file ${fileName} completed`);
+            });
+
+            downloadStream.on('error', (err) => {
+                console.error(`Error downloading file ${fileName}: ${err}`);
+                res.status(500).json({ error: 'Error while downloading file' });
+            });
         } catch (error) {
             console.error(`Error handling file download: ${error}`);
             res.status(500).json({ error: 'Internal server error' });

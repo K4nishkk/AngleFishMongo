@@ -22,3 +22,22 @@ export async function createFile(file: formidable.File, originalFilename: string
             });
     });
 }
+
+export async function retrieveFile(fileName: string): Promise<Readable> {
+    const {client, bucket }= await getBucket();
+    const downloadStream = bucket.openDownloadStreamByName(fileName);
+
+    return new Promise((resolve, reject) => {
+        downloadStream
+            .on('error', (error) => {
+                reject(new Error(`Error while downloading file: ${error}`));
+            })
+            .on('data', () => {
+                resolve(downloadStream);
+            })
+            .on('finish', () => {
+                console.log("finish event is present")
+                client.close();
+            });
+    });
+}
