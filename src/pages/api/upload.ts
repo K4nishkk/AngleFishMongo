@@ -64,6 +64,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
                 .pipe(bucket.openUploadStream(originalFilename))
                 .on('error', function (error) {
                     console.error(`Error while uploading file to Atlas: ${error}`);
+                    res.status(500).json({ error: `Error while uploading file to Atlas: ${error}` });
                 })
                 .on('finish', function () {
                     console.log('File successfully uploaded to Atlas');
