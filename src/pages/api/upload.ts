@@ -65,16 +65,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
             
             fileStream.pipe(uploadStream)
                 .on('error', function (error) {
-                    console.error(`Error while uploading file to Atlas: ${error}`);
-                    res.status(500).json({ error: `Error while uploading file to Atlas: ${error}` });
+                    throw new Error(`Error while uploading file to Atlas: ${error}`);
                 })
                 .on('finish', function () {
                     console.log('File successfully uploaded to Atlas');
                     client.close();
-                    res.status(200).json({
-                        message: "File uploaded successfully to MongoDB",
-                        fileId: uploadStream.id,
-                    });
+                });
+
+                res.status(200).json({
+                    message: "File uploaded successfully to MongoDB",
+                    fileId: uploadStream.id,
                 });
         }
         catch (error) {
