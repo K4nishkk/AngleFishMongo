@@ -75,7 +75,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
     }
     catch (error) {
         console.error(error);
-        res.status(500).json({ error: "Error while uploading file" });
+        res.status(500).json({ error: `Error while uploading file: ${error}` });
     }
   } else {
     res.setHeader('Allow', ['POST']);
