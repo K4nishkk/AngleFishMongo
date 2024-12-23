@@ -1,7 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import formidable from 'formidable';
-import { MongoClient, ServerApiVersion, GridFSBucket, Db, ObjectId } from "mongodb";
-import { Readable } from 'stream';
+import { createFile } from '@/services/fileOperations';
 
 export const config = {
     api: {
@@ -9,25 +8,18 @@ export const config = {
     }
 }
 
-// Define response type
 type ResponseData = {
     message?: string;
-    filePath?: string;
     error?: string;
-    fileId?: ObjectId;
 };
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse<ResponseData>) {
     if (req.method === 'POST') {
         try {
-            const form = formidable({
-                keepExtensions: true,
-            });
-
+            const form = formidable({ keepExtensions: true });
             const [fields, files] = await form.parse(req);
 
             const uploadedFile = files.file;
-
             if (!uploadedFile) {
                 return res.status(400).json({ error: "No file uploaded" });
             }
@@ -39,49 +31,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
                 return res.status(400).json({ error: "File name missing" });
             }
 
-            const uri = "mongodb+srv://angelfishmongo:jZd1LGFMAZshy14B@cluster0.hjdsx.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
-
-            // Create a MongoClient with a MongoClientOptions object to set the Stable API version
-            const client = new MongoClient(uri, {
-                serverApi: {
-                    version: ServerApiVersion.v1,
-                    strict: true,
-                    deprecationErrors: true,
-                }
-            });
-
-            // Connect to MongoDB
-            await client.connect();
-
-            const database: Db = client.db("testDB");
-            const bucket = new GridFSBucket(database, {
-                chunkSizeBytes: 1024 * 255,
-                bucketName: 'testBucket'
-            });
-
-            const fileStream = Readable.from(file.filepath); // Vercel might not allow this, consider uploading from the client
-
-            const uploadStream = bucket.openUploadStream(originalFilename);
-            
-            fileStream.pipe(uploadStream)
-                .on('error', function (error) {
-                    console.error(`Error while uploading file to Atlas: ${error}`);
-                    res.status(500).json({ error: `Error while uploading file to Atlas: ${error}` });
-                })
-                .on('finish', function () {
-                    console.log('File successfully uploaded to Atlas');
-                    client.close();
-                    res.status(200).json({
-                        message: "File uploaded successfully to MongoDB",
-                        fileId: uploadStream.id,
-                    });
-                });
+            createFile(file, originalFilename);
+                
+            res.status(200).json({ message: "File uploaded successfully to MongoDB" });
         }
         catch (error) {
             console.error(error);
             res.status(500).json({ error: `Error while uploading file: ${error}` });
         }
-    } else {
+    }
+    else {
         res.setHeader('Allow', ['POST']);
         res.status(405).json({ error: `Method ${req.method} not allowed` });
     }

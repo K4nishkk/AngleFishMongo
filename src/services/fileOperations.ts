@@ -1,50 +1,36 @@
-import fs from 'fs';
-import { GridFSBucket, ObjectId } from 'mongodb';
-import { getBucket } from '../config/db';
+import formidable from 'formidable';
+import { MongoClient, Db, GridFSBucket, ServerApiVersion } from 'mongodb';
+import { Readable } from 'stream';
 
-interface FileUploadResult {
-  fileId: string;
-}
+export async function createFile(file: formidable.File, originalFilename: string) {
+    const uri = "mongodb+srv://angelfishmongo:jZd1LGFMAZshy14B@cluster0.hjdsx.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
 
-// Create: Upload file to GridFS
-export async function uploadFile(filePath: string, fileName: string): Promise<FileUploadResult> {
-  const bucket: GridFSBucket = await getBucket();
-  const uploadStream = bucket.openUploadStream(fileName);
-  const fileStream = fs.createReadStream(filePath);
+    const client = new MongoClient(uri, {
+        serverApi: {
+            version: ServerApiVersion.v1,
+            strict: true,
+            deprecationErrors: true,
+        }
+    });
 
-  return new Promise((resolve, reject) => {
+    await client.connect();
+
+    const database: Db = client.db("testDB");
+    const bucket = new GridFSBucket(database, {
+        chunkSizeBytes: 1024 * 255,
+        bucketName: 'testBucket'
+    });
+
+    const fileStream = Readable.from(file.filepath);
+
+    const uploadStream = bucket.openUploadStream(originalFilename);
+
     fileStream.pipe(uploadStream)
-      .on('error', reject)
-      .on('finish', () => resolve({ fileId: uploadStream.id.toString() }));
-  });
-}
-
-// Read: Fetch file from GridFS by file ID or file name
-export async function getFile(fileId: string): Promise<Buffer> {
-  const bucket: GridFSBucket = await getBucket();
-  const downloadStream = bucket.openDownloadStream(new ObjectId(fileId));
-
-  return new Promise((resolve, reject) => {
-    const chunks: Buffer[] = [];
-    downloadStream.on('data', (chunk: Buffer) => chunks.push(chunk));
-    downloadStream.on('end', () => resolve(Buffer.concat(chunks)));
-    downloadStream.on('error', reject);
-  });
-}
-
-// Update: Replace file in GridFS
-export async function updateFile(fileId: string, newFilePath: string, newFileName: string): Promise<FileUploadResult> {
-  // Delete old file first
-  await deleteFile(fileId);
-
-  // Upload new file
-  return uploadFile(newFilePath, newFileName);
-}
-
-// Delete: Remove file from GridFS by file ID
-export async function deleteFile(fileId: string): Promise<void> {
-  const bucket: GridFSBucket = await getBucket();
-  return new Promise((resolve, reject) => {
-    bucket.delete(new ObjectId(fileId));
-  });
+        .on('error', function (error) {
+            throw new Error(`Error while uploading file to Atlas: ${error}`);
+        })
+        .on('finish', function () {
+            console.log('File successfully uploaded to Atlas');
+            client.close();
+        });
 }
