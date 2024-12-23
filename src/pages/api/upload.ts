@@ -15,7 +15,7 @@ type ResponseData = {
     message?: string;
     filePath?: string;
     error?: string;
-    fileId?: ObjectId;
+    fileId?: string;
 };
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse<ResponseData>) {
@@ -40,10 +40,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
                 return res.status(400).json({ error: "File name missing" });
             }
 
-            createFile(file, originalFilename);
+            const fileId: string = await createFile(file, originalFilename);
 
             res.status(200).json({
                 message: "File uploaded successfully to MongoDB",
+                fileId: fileId
             });
         }
         catch (error) {
