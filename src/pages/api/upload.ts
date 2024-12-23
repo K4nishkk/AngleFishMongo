@@ -1,6 +1,6 @@
-// File: pages/api/upload.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
 import formidable from 'formidable';
+import fs from 'fs/promises';
 
 export const config = {
     api: {
@@ -33,9 +33,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
 
         const file = Array.isArray(uploadedFile) ? uploadedFile[0] : uploadedFile;
 
+        const originalFilename = file.originalFilename
+        if (!originalFilename) {
+            return res.status(400).json({ error: "File name missing" });
+        }
+
+        await fs.rename(file.filepath, `public/uploads/${originalFilename}`);
+
         res.status(200).json({
             message: "File uploaded successfully",
-            filePath: `/uploads/${file.newFilename}`,
+            filePath: `/uploads/${file.originalFilename}`,
         })
     }
     catch (error) {
