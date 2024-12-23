@@ -10,18 +10,18 @@ const FileUpload = () => {
         }
     }
 
-    const handleSubmit = async(event: React.FormEvent) => {
+    const handleSubmit = async (event: React.FormEvent) => {
         event.preventDefault();
 
         if (!file) {
-            setMessage("No file selected");
+            setMessage("Please select a file");
             return;
         }
 
         const formData = new FormData();
         formData.append("file", file);
 
-        // send request
+        // send post request
         try {
             const response = await fetch("/api/upload", {
                 method: "POST",
@@ -31,14 +31,14 @@ const FileUpload = () => {
             const result = await response.json();
 
             if (response.ok) {
-                setMessage(`File uploaded: ${result.message}`);
+                setMessage(`File uploaded successfully: ${result.filePath}`);
             }
             else {
-                setMessage(`Error response: ${result.message}`);
+                setMessage(`Error: ${result.error}`);
             }
         }
         catch (error) {
-            setMessage(`Error occured while uploading file: ${error}`);
+            setMessage(`Error while uploading file: ${error}`);
         }
     };
 
