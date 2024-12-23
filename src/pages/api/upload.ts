@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import formidable from 'formidable';
 import fs from 'fs';
 import { MongoClient, ServerApiVersion, GridFSBucket, Db } from "mongodb";
+import path from 'path';
 
 export const config = {
     api: {
@@ -39,7 +40,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
             return res.status(400).json({ error: "File name missing" });
         }
 
-        await fs.promises.rename(file.filepath, `public/uploads/${originalFilename}`);
+        // Ensure the uploads directory exists
+        const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
+        if (!fs.existsSync(uploadsDir)) {
+            fs.mkdirSync(uploadsDir, { recursive: true }); // Create the directory if it doesn't exist
+        }
+
+        // Move the uploaded file to the uploads directory
+        await fs.promises.rename(file.filepath, path.join(uploadsDir, originalFilename));
 
         const uri = "mongodb+srv://angelfishmongo:jZd1LGFMAZshy14B@cluster0.hjdsx.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
 
