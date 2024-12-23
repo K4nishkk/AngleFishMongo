@@ -1,8 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import formidable from 'formidable';
-import fs from 'fs';
 import { MongoClient, ServerApiVersion, GridFSBucket, Db, ObjectId } from "mongodb";
-import path from 'path';
 import { Readable } from 'stream';
 
 export const config = {
@@ -52,16 +50,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
                 }
             });
 
+            // Connect to MongoDB
+            await client.connect();
+
             const database: Db = client.db("testDB");
             const bucket = new GridFSBucket(database, {
                 chunkSizeBytes: 1024 * 255,
                 bucketName: 'testBucket'
             });
 
-            const fileStream = Readable.from(file.filepath);
+            const fileStream = Readable.from(file.filepath); // Vercel might not allow this, consider uploading from the client
 
-            fileStream
-                .pipe(bucket.openUploadStream(originalFilename))
+            const uploadStream = bucket.openUploadStream(originalFilename);
+            
+            fileStream.pipe(uploadStream)
                 .on('error', function (error) {
                     console.error(`Error while uploading file to Atlas: ${error}`);
                     res.status(500).json({ error: `Error while uploading file to Atlas: ${error}` });
@@ -69,12 +71,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse<
                 .on('finish', function () {
                     console.log('File successfully uploaded to Atlas');
                     client.close();
+                    res.status(200).json({
+                        message: "File uploaded successfully to MongoDB",
+                        fileId: uploadStream.id,
+                    });
                 });
-
-            res.status(200).json({
-                message: "File uploaded successfully",
-                filePath: `/uploads/${file.originalFilename}`,
-            })
         }
         catch (error) {
             console.error(error);
