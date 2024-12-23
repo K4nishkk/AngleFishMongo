@@ -1,25 +1,9 @@
 import formidable from 'formidable';
-import { MongoClient, Db, GridFSBucket, ServerApiVersion } from 'mongodb';
 import { Readable } from 'stream';
+import { getBucket } from '@/config/db';
 
 export async function createFile(file: formidable.File, originalFilename: string): Promise<string> {
-    const uri = "mongodb+srv://angelfishmongo:jZd1LGFMAZshy14B@cluster0.hjdsx.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
-
-    const client = new MongoClient(uri, {
-        serverApi: {
-            version: ServerApiVersion.v1,
-            strict: true,
-            deprecationErrors: true,
-        }
-    });
-
-    await client.connect();
-
-    const database: Db = client.db("testDB");
-    const bucket = new GridFSBucket(database, {
-        chunkSizeBytes: 1024 * 255,
-        bucketName: 'testBucket'
-    });
+    const { client, bucket } = await getBucket();
 
     const fileStream = Readable.from(file.filepath);
 
