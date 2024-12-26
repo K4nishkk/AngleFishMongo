@@ -14,27 +14,47 @@ export default async function handler( req: NextApiRequest, res: NextApiResponse
             }
         });
 
-        const database: Db = client.db("testDB");
-        const bucket = new GridFSBucket(database, {
-            chunkSizeBytes: 1024 * 255,
-            bucketName: 'testBucket'
-        });
-
-        const info: Array<GridFSFile> = [];
-
-        const cursor = bucket.find({ filename: "testFilename"});
-        for await (const doc of cursor) {
-            console.log(doc)
-            info.push(doc)
+        try {
+    
+            const database: Db = client.db("testDB");
+            const bucket = new GridFSBucket(database, {
+                chunkSizeBytes: 1024 * 255,
+                bucketName: 'testBucket'
+            });
+    
+            const info: Array<GridFSFile> = [];
+    
+            const cursor = bucket.find({ filename: "testFilename"});
+            for await (const doc of cursor) {
+                console.log(doc)
+                info.push(doc)
+            }
+    
+            const fileId = info.at(0)?._id;
+    
+            console.log(fileId);
+    
+            if (fileId) {
+                try {
+                    await bucket.delete(fileId);
+                    console.log(`File with ID ${fileId} successfully deleted.`);
+                    res.status(204).json({ message: `File successfully deleted with fileId ${fileId}`})
+                } catch (err) {
+                    console.error(`Error deleting file with ID ${fileId}:`, err);
+                    res.status(500).json({ error: `Error deleting file with ID ${fileId}` });
+                    return;
+                }
+            } else {
+                console.error("File not found in the database.");
+                res.status(404).json({ message: "File not found in the database." });
+                return;
+            }
         }
-
-        const fileId = info.at(0)?._id;
-
-        console.log(fileId);
-
-        if (fileId) {
-            bucket.delete(fileId);
+        catch (err) {
+            console.log(err);
+        }        
+        finally {
+            await client.close();
         }
-        res.status(200).json({ message: "file successfully deleted.", fileData: info})
     }
 }

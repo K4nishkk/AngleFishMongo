@@ -33,16 +33,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 .on('error', function (error) {
                     console.error(`Error while uploading file to Atlas: ${error}`);
                     res.status(500).json({ error: `Error while uploading file to Atlas: ${error}` });
+                    client.close();
                 })
                 .on('finish', function () {
                     console.log('File successfully uploaded to Atlas');
+                    res.status(200).json({
+                        message: "File uploaded successfully",
+                        fileId: uploadStream.id,
+                    });
                     client.close();
                 });
 
-            res.status(200).json({
-                message: "File uploaded successfully",
-                fileId: uploadStream.id,
-            })
         }
         catch (err) {
             console.error("Error", err);
