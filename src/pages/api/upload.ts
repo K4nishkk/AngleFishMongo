@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { MongoClient, ServerApiVersion, GridFSBucket, Db } from "mongodb";
+import path from "path";
 import fs from "fs";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -23,7 +24,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 bucketName: 'testBucket'
             });
 
-            const fileStream = fs.createReadStream("./public/testImage.jpg");
+            const filePath = path.join(process.cwd(), "public", "testImage.jpg");
+            const fileStream = fs.createReadStream(filePath);
 
             fileStream
                 .pipe(bucket.openUploadStream("testFilename"))
