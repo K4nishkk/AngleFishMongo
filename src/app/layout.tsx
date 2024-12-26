@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Angle Fish Mongo",
+  title: "Angel Fish Mongo",
   description: "MongoDB file system",
 };
 

@@ -1,50 +1,51 @@
-import type { NextApiRequest, NextApiResponse } from 'next';
-import formidable from 'formidable';
-import { createFile } from '@/services/fileOperations';
+import type { NextApiRequest, NextApiResponse } from "next";
+import { MongoClient, ServerApiVersion, GridFSBucket, Db } from "mongodb";
+import fs from "fs";
 
-export const config = {
-    api: {
-        bodyParser: false,
-    }
-}
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+    if (req.method === "POST") {
 
-type ResponseData = {
-    message?: string;
-    error?: string;
-    fileId?: string;
-};
-
-export default async function handler(req: NextApiRequest, res: NextApiResponse<ResponseData>) {
-    if (req.method === 'POST') {
         try {
-            const form = formidable({ keepExtensions: true });
-            const [fields, files] = await form.parse(req);
+            const uri = "mongodb+srv://angelfishmongo:jZd1LGFMAZshy14B@cluster0.hjdsx.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
+            console.log("meow")
+            // Create a MongoClient with a MongoClientOptions object to set the Stable API version
+            const client = new MongoClient(uri, {
+                serverApi: {
+                    version: ServerApiVersion.v1,
+                    strict: true,
+                    deprecationErrors: true,
+                }
+            });
 
-            const uploadedFile = files.file;
-            if (!uploadedFile) {
-                return res.status(400).json({ error: "No file uploaded" });
-            }
+            const database: Db = client.db("testDB");
+            const bucket = new GridFSBucket(database, {
+                chunkSizeBytes: 1024 * 255,
+                bucketName: 'testBucket'
+            });
 
-            const file = Array.isArray(uploadedFile) ? uploadedFile[0] : uploadedFile;
+            const fileStream = fs.createReadStream("./public/testImage.jpg");
 
-            const originalFilename = file.originalFilename
-            if (!originalFilename) {
-                return res.status(400).json({ error: "File name missing" });
-            }
-
-            const fileId: string = await createFile(file, originalFilename);
+            fileStream
+                .pipe(bucket.openUploadStream("testFilename"))
+                .on('error', function (error) {
+                    console.error(`Error while uploading file to Atlas: ${error}`);
+                    res.status(500).json({ error: `Error while uploading file to Atlas: ${error}` });
+                })
+                .on('finish', function () {
+                    console.log('File successfully uploaded to Atlas');
+                    client.close();
+                });
 
             res.status(200).json({
-                message: "File uploaded successfully to MongoDB",
-                fileId: fileId
-            });
+                message: "File uploaded successfully",
+            })
         }
-        catch (error) {
-            console.error(error);
-            res.status(500).json({ error: `Error while uploading file: ${error}` });
+        catch (err) {
+            console.error("Error", err);
+            res.status(500).json({ error: err });
         }
-    } else {
-        res.setHeader('Allow', ['POST']);
-        res.status(405).json({ error: `Method ${req.method} not allowed` });
+    }
+    else {
+        res.status(405).json({ message: "Method not allowed" });
     }
 }
