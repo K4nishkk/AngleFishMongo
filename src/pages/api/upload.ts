@@ -8,8 +8,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         try {
             const uri = "mongodb+srv://angelfishmongo:jZd1LGFMAZshy14B@cluster0.hjdsx.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
-            console.log("meow")
-            // Create a MongoClient with a MongoClientOptions object to set the Stable API version
+
             const client = new MongoClient(uri, {
                 serverApi: {
                     version: ServerApiVersion.v1,
@@ -27,8 +26,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             const filePath = path.join(process.cwd(), "public", "testImage.jpg");
             const fileStream = fs.createReadStream(filePath);
 
+            const uploadStream = bucket.openUploadStream("testFilename")
+
             fileStream
-                .pipe(bucket.openUploadStream("testFilename"))
+                .pipe(uploadStream)
                 .on('error', function (error) {
                     console.error(`Error while uploading file to Atlas: ${error}`);
                     res.status(500).json({ error: `Error while uploading file to Atlas: ${error}` });
@@ -40,6 +41,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
             res.status(200).json({
                 message: "File uploaded successfully",
+                fileId: uploadStream.id,
             })
         }
         catch (err) {
