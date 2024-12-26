@@ -38,7 +38,7 @@ export default async function handler( req: NextApiRequest, res: NextApiResponse
                 try {
                     await bucket.delete(fileId);
                     console.log(`File with ID ${fileId} successfully deleted.`);
-                    res.status(204).json({ message: `File successfully deleted with fileId ${fileId}`})
+                    res.status(200).json({ message: `File successfully deleted with fileId ${fileId}`})
                 } catch (err) {
                     console.error(`Error deleting file with ID ${fileId}:`, err);
                     res.status(500).json({ error: `Error deleting file with ID ${fileId}` });
@@ -52,9 +52,13 @@ export default async function handler( req: NextApiRequest, res: NextApiResponse
         }
         catch (err) {
             console.log(err);
+            res.status(500).json({ error: err })
         }        
         finally {
             await client.close();
         }
+    }
+    else {
+        res.status(405).json({ message: "method not allowed" })
     }
 }
