@@ -9,3 +9,6 @@
 * Create and delete GridFS bucket
 * Upload, download, delete and rename files
 * Retrieve file information
+
+> Upload, download, delete working properly on commit "send download to client"
+
