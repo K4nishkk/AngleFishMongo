@@ -1,22 +1,34 @@
 import { MongoClient, ServerApiVersion } from "mongodb";
+import { findManyDoc, findOneDoc, insertManyDoc, insertOneDoc } from "./documentOperations";
 
-export type Operation = {
+export type OperationDetails = {
     database: string,
     bucket?: string,
     collection: string,
-    operation: string,
-    document: Object,
+    name: string,
+    document?: Object,
+    query?: Object,
+    options?: Object,
 }
 
-export type OperationDetails = {
-    Operations: Array<Operation>,
+export type OperationsData = {
+    OperationsList: Array<OperationDetails>,
 }
+
+type Operation = (client: MongoClient, operationDetails: OperationDetails) => Promise<any>;
+
+const operationMap = new Map<string, Operation>([
+    ["insertOne", async (client: MongoClient, operationDetails: OperationDetails) => await insertOneDoc(client, operationDetails)],
+    ["insertMany", async (client: MongoClient, operationDetails: OperationDetails) => await insertManyDoc(client, operationDetails)],
+    ["findOne", async (client: MongoClient, operationDetails: OperationDetails) => await findOneDoc(client, operationDetails)],
+    ["findMany", async (client: MongoClient, operationDetails: OperationDetails) => await findManyDoc(client, operationDetails)],
+])
 
 class ClusterManager {
     private client: MongoClient;
-    private operationDetails: OperationDetails;
+    private operationDetails: OperationsData;
 
-    public constructor(cluster_id: string, operationDetails: OperationDetails) {
+    public constructor(cluster_id: string, operationDetails: OperationsData) {
         const uri = `mongodb+srv://${process.env.CLIENT_NAME}:${process.env.PASSWORD}@cluster0.${cluster_id}.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
         this.client = new MongoClient(uri, {
@@ -32,14 +44,14 @@ class ClusterManager {
 
     public async performOperations() {
         try {
-            for (const operation of this.operationDetails.Operations) {
-                const database = this.client.db(operation.database);
-                const collection = database.collection(operation.collection);
-
-                const doc = operation.document;
-                const result = await collection.insertOne(doc);
-
-                console.log(`Document inserted successfully with _id: ${result.insertedId}`);
+            for (const operation of this.operationDetails.OperationsList) {
+                const execute = operationMap.get(operation.name);
+                if (execute) {
+                    await execute(this.client, operation);
+                }
+                else {
+                    console.log("Operation not found");
+                }
             }
         }
         catch (err) {
