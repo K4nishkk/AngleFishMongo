@@ -1,6 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import ClusterManager from "@/dataAccessLayer/clusterManager";
 
+export const maxDuration = 60;
+export const dynamic = 'force-dynamic';
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     if (req.method === "POST") {
         if (process.env.CLUSTER_0) {

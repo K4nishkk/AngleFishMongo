@@ -44,6 +44,7 @@ class ClusterManager {
         }
         catch (err) {
             console.log("Error while performing operation: ", err);
+            throw new Error(`Error while performaing operation: ${err}`);
         }
         finally {
             this.client.close();
