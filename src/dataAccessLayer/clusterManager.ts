@@ -1,5 +1,7 @@
 import { MongoClient, ServerApiVersion } from "mongodb";
 import * as documentOperations from "./documentOperations";
+import logger from "@/lib/logger";
+import { AppError } from "@/lib/errors";
 
 export type OperationDetails = {
     database: string,
@@ -18,15 +20,15 @@ export type OperationsData = {
 type Operation = (client: MongoClient, operationDetails: OperationDetails) => Promise<any>;
 
 const operationMap = new Map<string, Operation>([
-    ["insertOne", async (client: MongoClient, operationDetails: OperationDetails) => await documentOperations.insertOneDoc(client, operationDetails)],
-    ["insertMany", async (client: MongoClient, operationDetails: OperationDetails) => await documentOperations.insertManyDoc(client, operationDetails)],
-    ["findOne", async (client: MongoClient, operationDetails: OperationDetails) => await documentOperations.findOneDoc(client, operationDetails)],
-    ["findMany", async (client: MongoClient, operationDetails: OperationDetails) => await documentOperations.findManyDoc(client, operationDetails)],
-    ["updateOne", async (client: MongoClient, operationDetails: OperationDetails) => await documentOperations.updateOneDoc(client, operationDetails)],
-    ["updateMany", async (client: MongoClient, operationDetails: OperationDetails) => await documentOperations.updateManyDoc(client, operationDetails)],
-    ["deleteOne", async (client: MongoClient, operationDetails: OperationDetails) => await documentOperations.deleteOneDoc(client, operationDetails)],
-    ["deleteMany", async (client: MongoClient, operationDetails: OperationDetails) => await documentOperations.deleteManyDoc(client, operationDetails)],
-])
+    ["insertOne", documentOperations.insertOneDoc],
+    ["insertMany", documentOperations.insertManyDoc],
+    ["findOne", documentOperations.findOneDoc],
+    ["findMany", documentOperations.findManyDoc],
+    ["updateOne", documentOperations.updateOneDoc],
+    ["updateMany", documentOperations.updateManyDoc],
+    ["deleteOne", documentOperations.deleteOneDoc],
+    ["deleteMany", documentOperations.deleteManyDoc],
+]);
 
 class ClusterManager {
     private client: MongoClient;
@@ -47,26 +49,36 @@ class ClusterManager {
     }
 
     public async performOperations() {
-        const result = [];
+        const results = [];
         try {
+            await this.client.connect();
+            logger.info("MongoDB client connected");
+
             for (const operation of this.operationDetails.OperationsList) {
                 const execute = operationMap.get(operation.name);
-                if (execute) {
-                    const output = await execute(this.client, operation);
-                    result.push(output);
+                if (!execute) {
+                    throw new AppError(`Operation "${operation.name}" not found`, 400);
                 }
-                else {
-                    console.log("Operation not found");
-                }
+
+                const output = await execute(this.client, operation);
+                results.push(output);
+                logger.debug(`Operation "${operation.name}" completed successfully`);
             }
         }
-        catch (err) {
-            console.log("Error while performing operation: ", err);
-            throw new Error(`Error while performaing operation: ${err}`);
+        catch (error) {
+            if (error instanceof Error) {
+                logger.error(`Error in performOperations: ${error.message}`, { stack: error.stack });
+                throw new AppError(`Operation failed: ${error.message}`, 500, false);
+            }
+            else {
+                logger.error(`Unknown error type: ${JSON.stringify(error)}`);
+                throw new AppError(`Operation failed: ${JSON.stringify(error)}`, 500, false);
+            }
         }
         finally {
             this.client.close();
-            return result;
+            logger.info("MongoDB client connection closed")
+            return results;
         }
     }
 }

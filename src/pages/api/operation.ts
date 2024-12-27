@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import ClusterManager from "@/dataAccessLayer/clusterManager";
+import logger from "@/lib/logger";
 
 export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
@@ -57,27 +58,35 @@ const operationsList = [
         database: "testDB",
         collection: "testCollection",
         name: "deleteMany",
-        filter: { $or: [
-            { name: "testDocument1" },
-            { name: "testDocument2" },
-            { name: "testDocument3" }
-        ] },
-    },    
+        filter: {
+            $or: [
+                { name: "testDocument1" },
+                { name: "testDocument2" },
+                { name: "testDocument3" }
+            ]
+        },
+    },
 ]
 
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     if (req.method === "POST") {
-        if (process.env.CLUSTER_0) {
-            const clusterManager = new ClusterManager(process.env.CLUSTER_0, {
-                OperationsList: operationsList,
-            });
+        try {
+            if (process.env.CLUSTER_0) {
+                const clusterManager = new ClusterManager(process.env.CLUSTER_0, {
+                    OperationsList: operationsList,
+                });
 
-            const result = await clusterManager.performOperations();
-            res.status(200).json({
-                message: "Operation performed successfully, probably!",
-                result: result,
-            })
+                const result = await clusterManager.performOperations();
+                res.status(200).json({
+                    message: "All operations performed successfully",
+                    result: result,
+                })
+            }
+        }
+        catch (error: any) {
+            logger.error(`API Handler Error: ${error.message}`, { stack: error.stack });
+            res.status(error.statusCode || 500).json({ message: error.message || "Internal Server Error" });
         }
     }
     else {
