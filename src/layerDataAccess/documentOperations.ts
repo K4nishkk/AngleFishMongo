@@ -1,6 +1,6 @@
 import { Filter, MongoClient, OptionalId } from "mongodb";
 import type { OperationDetails } from "./clusterManager";
-import logger from "../lib/logger"; // Assuming you have a logger utility
+import logger from "../lib/logger";
 
 const getCollection = (client: MongoClient, operation: OperationDetails) => {
     try {

@@ -67,7 +67,8 @@ class ClusterManager {
         }
         catch (error) {
             if (error instanceof Error) {
-                logger.error(`Error in performOperations: ${error.message}`, { stack: error.stack });
+                logger.error(`Error in performOperations: ${error.message}`);
+                console.log(error.stack);
                 throw new AppError(`Operation failed: ${error.message}`, 500, false);
             }
             else {

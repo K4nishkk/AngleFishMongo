@@ -19,7 +19,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             const database: Db = client.db("testDB");
             const bucket = new GridFSBucket(database, {
                 chunkSizeBytes: 1024 * 255,
-                bucketName: 'testBucket'
             });
 
             const filePath = path.join(process.cwd(), "public", "testImage.jpg");
