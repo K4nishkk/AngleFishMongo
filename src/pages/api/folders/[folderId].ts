@@ -18,7 +18,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
         
         logger.info(`Found directory with id: ${folderId}`);
-        res.status(200).json({ result });
+        res.status(200).json( result );
     }
     catch (err: any) {
         logger.error(err.stack);

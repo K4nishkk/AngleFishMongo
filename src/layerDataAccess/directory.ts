@@ -1,6 +1,15 @@
 import logger from "@/lib/logger";
 import { Collection, Db, MongoClient, ObjectId, ServerApiVersion } from "mongodb";
 
+export type MongoRecord = {
+    _id: string,
+    type: string, 
+    name: string,
+    parentId: string | null,
+    createdAt: string,
+    updatedAt: string,
+}
+
 export default class Directory {
     public static async getRecords(folderId: ObjectId) {
         const uri = `mongodb+srv://${process.env.CLIENT_NAME}:${process.env.PASSWORD}@cluster0.${process.env.CLUSTER_0}.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
@@ -13,7 +22,8 @@ export default class Directory {
             }
         });
 
-        let result = null;
+        let folder = null;
+        const children = [];
 
         try {
             client.connect();
@@ -22,16 +32,15 @@ export default class Directory {
             const database: Db = client.db("FILE_SYSTEM");
             const collection: Collection = database.collection("DIRECTORIES");
 
-            result = await collection.findOne({ _id: folderId});
+            folder = await collection.findOne({ _id: folderId});
 
-            if (result && result.children) {
-                const cursor = collection.find({ _id: { $in: result.children } });
+            if (folder && folder.children) {
+                const cursor = collection.find({ _id: { $in: folder.children } });
 
-                const children = [];
                 for await (const record of cursor) {
                     children.push(record);
                 }
-                result.children = children;
+                folder.children = children;
             }
         }
         catch (err) {
@@ -40,7 +49,7 @@ export default class Directory {
         finally {
             client.close();
             logger.info("MongoDB connection closed");
-            return result;
+            return {folder: folder, children: children};
         }
     }
 }
